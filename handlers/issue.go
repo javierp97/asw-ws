@@ -3,7 +3,6 @@ package handlers
 import (
 	"asw-project/models"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -19,7 +18,6 @@ func enableCors(w *http.ResponseWriter) {
 }
 
 func authenticate(key string) bool {
-	fmt.Println("entro authenitcate")
 	users, _ := models.GetAllUsers()
 	exists := false
 	for _, s := range users {
@@ -32,13 +30,10 @@ func authenticate(key string) bool {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	fmt.Println("llega la req")
 	if r.Method == "OPTIONS" {
-		fmt.Println("Entro options")
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		fmt.Println("Entro resto	")
 		key := r.Header.Get("Authorization")
 		auth := authenticate(key)
 		if auth == true {
