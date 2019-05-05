@@ -3,6 +3,7 @@ package handlers
 import (
 	"asw-project/models"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -17,7 +18,8 @@ func enableCors(w *http.ResponseWriter) {
 
 }
 
-func authenticate(key string) bool {
+func authenticate(r *http.Request) bool {
+	key := r.Header.Get("Authentication")
 	users, _ := models.GetAllUsers()
 	exists := false
 	for _, s := range users {
@@ -28,27 +30,47 @@ func authenticate(key string) bool {
 	return exists
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+func GetIssue(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		key := r.Header.Get("Authorization")
-		auth := authenticate(key)
-		if auth == true {
-			enableCors(&w)
-			vars := mux.Vars(r)
+		vars := mux.Vars(r)
 
-			id, _ := strconv.Atoi(vars["id"])
-			issue, _ := models.FindIssueByID(uint(id))
+		id, _ := strconv.Atoi(vars["id"])
+		issue, _ := models.FindIssueByID(uint(id))
 
+		w.Header().Set("Content-Type", "application/json")
+		j, _ := json.Marshal(issue)
+		w.WriteHeader(http.StatusOK)
+		w.Write(j)
+	}
+}
+
+//TODO: CHECK NULLS
+func CreateIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		exists := authenticate(r)
+		if exists == true {
+			var issue models.Issue
+			decoder := json.NewDecoder(r.Body)
+			err := decoder.Decode(&issue)
+			if err != nil {
+				panic(err)
+			}
+			models.CreateIssue(issue)
 			w.Header().Set("Content-Type", "application/json")
 			j, _ := json.Marshal(issue)
+			fmt.Println(issue)
 			w.WriteHeader(http.StatusOK)
 			w.Write(j)
 		} else {
-			w.Write([]byte("Cannot autenticate"))
+			w.Write([]byte("{403:Forbidden}"))
 		}
 	}
 }
