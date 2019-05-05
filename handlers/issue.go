@@ -27,22 +27,26 @@ func authenticate(key string) bool {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-
-	key := r.Header.Get("Authorization")
-	auth := authenticate(key)
-	if auth == true {
-		enableCors(&w)
-		vars := mux.Vars(r)
-
-		id, _ := strconv.Atoi(vars["id"])
-		issue, _ := models.FindIssueByID(uint(id))
-
-		w.Header().Set("Content-Type", "application/json")
-		j, _ := json.Marshal(issue)
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
-		w.Write(j)
+		return
 	} else {
-		w.Write([]byte("Cannot autenticate"))
-	}
+		key := r.Header.Get("Authorization")
+		auth := authenticate(key)
+		if auth == true {
+			enableCors(&w)
+			vars := mux.Vars(r)
 
+			id, _ := strconv.Atoi(vars["id"])
+			issue, _ := models.FindIssueByID(uint(id))
+
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal(issue)
+			w.WriteHeader(http.StatusOK)
+			w.Write(j)
+		} else {
+			w.Write([]byte("Cannot autenticate"))
+		}
+	}
 }
