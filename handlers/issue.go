@@ -74,3 +74,24 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func DeleteIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		exists := authenticate(r)
+		if exists == true {
+			vars := mux.Vars(r)
+
+			id, _ := strconv.Atoi(vars["id"])
+			var issue models.Issue
+			issue.ID = uint(id)
+			models.DeleteIssue(issue)
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.Write([]byte("{403:Forbidden}"))
+		}
+	}
+}
