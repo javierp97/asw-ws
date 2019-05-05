@@ -17,7 +17,8 @@ func enableCors(w *http.ResponseWriter) {
 
 }
 
-func authenticate(key string) bool {
+func authenticate(r *http.Request) bool {
+	key := r.Header.Get("Authorization")
 	users, _ := models.GetAllUsers()
 	exists := false
 	for _, s := range users {
@@ -34,8 +35,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		key := r.Header.Get("Authorization")
-		auth := authenticate(key)
+		auth := authenticate(r)
 		if auth == true {
 			enableCors(&w)
 			vars := mux.Vars(r)
