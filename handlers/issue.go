@@ -26,7 +26,7 @@ func authenticate(key string) bool {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 
-	key := r.Header.Get("apiKey")
+	key := r.Header.Get("Authorization")
 	auth := authenticate(key)
 	if auth == true {
 		enableCors(&w)
