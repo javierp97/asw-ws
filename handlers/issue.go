@@ -14,6 +14,8 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	(*w).Header().Set("Access-Control-Allow-Credentials", "true")
+
 }
 
 func authenticate(key string) bool {
@@ -30,6 +32,7 @@ func authenticate(key string) bool {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
+	fmt.Println("llega la req")
 	if r.Method == "OPTIONS" {
 		fmt.Println("Entro options")
 		w.WriteHeader(http.StatusOK)

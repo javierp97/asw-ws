@@ -20,7 +20,7 @@ func main() {
 	r := mux.NewRouter().StrictSlash(false)
 
 	//Functions to implement
-	r.HandleFunc("/api/issue/{id}", handlers.Index).Methods("GET")
+	r.HandleFunc("/api/issue/{id}", handlers.Index).Methods("GET", "OPTIONS")
 
 	//END
 	server := &http.Server{
