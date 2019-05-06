@@ -3,6 +3,7 @@ package handlers
 import (
 	"asw-project/models"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -22,33 +23,82 @@ func authenticate(r *http.Request) bool {
 	users, _ := models.GetAllUsers()
 	exists := false
 	for _, s := range users {
+		fmt.Println("firebaseID: " + s.FirebaseID + " key: " + key)
 		if s.FirebaseID == key {
 			exists = true
 		}
 	}
+	fmt.Println(exists)
 	return exists
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+func checkParams(issue models.Issue) bool {
+	correct := true
+	fmt.Println(models.ExistKind(issue.Type))
+	fmt.Println()
+	correct = (correct && models.ExistStatus(issue.Status) && models.ExistPriority(issue.Priority) && models.ExistKind(issue.Type))
+	fmt.Println("check params: ", correct)
+	return correct
+}
+
+func checkNulls(issue models.Issue) bool {
+	correct := true
+	if issue.Title == "" || issue.Description == "" || issue.Priority == "" || issue.Type == "" || issue.Assignee == "" || issue.Reporter == "" {
+		correct = false
+	}
+	fmt.Println("check nuls: ", correct)
+	return correct
+}
+
+func GetIssue(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		auth := authenticate(r)
-		if auth == true {
-			enableCors(&w)
-			vars := mux.Vars(r)
+		vars := mux.Vars(r)
 
-			id, _ := strconv.Atoi(vars["id"])
-			issue, _ := models.FindIssueByID(uint(id))
+		id, _ := strconv.Atoi(vars["id"])
+		issue, _ := models.FindIssueByID(uint(id))
 
+		w.Header().Set("Content-Type", "application/json")
+		j, _ := json.Marshal(issue)
+		w.WriteHeader(http.StatusOK)
+		w.Write(j)
+	}
+}
+
+func CreateIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		exists := authenticate(r)
+		if exists == true {
+			var issue models.Issue
+			decoder := json.NewDecoder(r.Body)
+			err := decoder.Decode(&issue)
+			if err != nil {
+				panic(err)
+			}
+			issue.Status = "New"
+			issue.Votes = 0
+			fmt.Println("filepath: " + issue.FilePath)
+			if checkParams(issue) == false || checkNulls(issue) == false {
+				fmt.Println(checkNulls(issue))
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"Wrong parameters"}`))
+				return
+			}
+			models.CreateIssue(issue)
 			w.Header().Set("Content-Type", "application/json")
 			j, _ := json.Marshal(issue)
+			fmt.Println(issue)
 			w.WriteHeader(http.StatusOK)
 			w.Write(j)
 		} else {
-			w.Write([]byte("Cannot autenticate"))
+			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
 }
