@@ -83,7 +83,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&issue)
 			if err != nil {
-				panic(err)
+				panic(err) //TODO
 			}
 			issue.Status = "New"
 			issue.Votes = 0
@@ -96,15 +96,94 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			}
 			id, _ := models.CreateIssue(issue)
 			issueResp, _ := models.FindIssueByID(id)
+			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
 			j, _ := json.Marshal(issueResp)
-
-			w.WriteHeader(http.StatusOK)
 			w.Write(j)
 		} else {
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
+}
+
+func updateIssue(actualIssue *models.Issue, newIssue models.Issue) {
+
+	title := newIssue.Title
+	if title != "" {
+		actualIssue.Title = title
+	}
+
+	desc := newIssue.Description
+	if desc != "" {
+		actualIssue.Description = desc
+	}
+
+	prio := newIssue.Priority
+	if prio != "" && models.ExistPriority(prio) {
+		actualIssue.Priority = prio
+	}
+
+	kind := newIssue.Type
+	if kind != "" && models.ExistKind(kind) {
+		actualIssue.Type = kind
+	}
+
+	status := newIssue.Status
+	if status != "" && models.ExistStatus(status) {
+		actualIssue.Status = status
+	}
+
+	assig := newIssue.Assignee
+
+	if assig != "" {
+		actualIssue.Assignee = assig
+	}
+
+	file := newIssue.FilePath
+
+	if file != "" {
+		actualIssue.FilePath = file
+	}
+
+}
+
+func PutIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		exists := authenticate(r)
+		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newIssue models.Issue
+			err := decoder.Decode(&newIssue)
+			if err != nil {
+				panic(err) //TODO
+			}
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			actualIssue, err := models.FindIssueByID(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The requested issue could not be found"}`))
+				return
+			}
+
+			updateIssue(&actualIssue, newIssue)
+			models.UpdateIssue(actualIssue)
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal(actualIssue)
+			w.Write(j)
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"Error":"You do not have access to do this request"}`))
+			return
+		}
+	}
+
 }
 
 func DeleteIssue(w http.ResponseWriter, r *http.Request) {
