@@ -23,21 +23,20 @@ func authenticate(r *http.Request) bool {
 	users, _ := models.GetAllUsers()
 	exists := false
 	for _, s := range users {
-		fmt.Println("firebaseID: " + s.FirebaseID + " key: " + key)
 		if s.FirebaseID == key {
 			exists = true
 		}
 	}
-	fmt.Println(exists)
+	//fmt.Println(exists)
 	return exists
 }
 
 func checkParams(issue models.Issue) bool {
 	correct := true
-	fmt.Println(models.ExistKind(issue.Type))
-	fmt.Println()
+	//	fmt.Println(models.ExistKind(issue.Type))
+	//	fmt.Println()
 	correct = (correct && models.ExistStatus(issue.Status) && models.ExistPriority(issue.Priority) && models.ExistKind(issue.Type))
-	fmt.Println("check params: ", correct)
+	//	fmt.Println("check params: ", correct)
 	return correct
 }
 
@@ -46,7 +45,7 @@ func checkNulls(issue models.Issue) bool {
 	if issue.Title == "" || issue.Description == "" || issue.Priority == "" || issue.Type == "" || issue.Assignee == "" || issue.Reporter == "" {
 		correct = false
 	}
-	fmt.Println("check nuls: ", correct)
+	//fmt.Println("check nuls: ", correct)
 	return correct
 }
 
@@ -57,9 +56,13 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		vars := mux.Vars(r)
-
 		id, _ := strconv.Atoi(vars["id"])
-		issue, _ := models.FindIssueByID(uint(id))
+		issue, err := models.FindIssueByID(uint(id))
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"Error":"The requested issue could not be found"}`))
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		j, _ := json.Marshal(issue)
@@ -84,17 +87,18 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			}
 			issue.Status = "New"
 			issue.Votes = 0
-			fmt.Println("filepath: " + issue.FilePath)
+			//fmt.Println("filepath: " + issue.FilePath)
 			if checkParams(issue) == false || checkNulls(issue) == false {
-				fmt.Println(checkNulls(issue))
+				//	fmt.Println(checkNulls(issue))
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
 			}
-			models.CreateIssue(issue)
+			id, _ := models.CreateIssue(issue)
+			issueResp, _ := models.FindIssueByID(id)
 			w.Header().Set("Content-Type", "application/json")
-			j, _ := json.Marshal(issue)
-			fmt.Println(issue)
+			j, _ := json.Marshal(issueResp)
+
 			w.WriteHeader(http.StatusOK)
 			w.Write(j)
 		} else {
@@ -112,14 +116,20 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 		exists := authenticate(r)
 		if exists == true {
 			vars := mux.Vars(r)
-
 			id, _ := strconv.Atoi(vars["id"])
-			var issue models.Issue
-			issue.ID = uint(id)
-			models.DeleteIssue(issue)
+			issue, error := models.FindIssueByID(uint(id))
+			fmt.Println(error)
+			err := models.DeleteIssue(issue)
+
+			if err != nil || error != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"400":"Bad Request"}`))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"IssueDeleted":"OK"}`))
 		} else {
-			w.Write([]byte("{403:Forbidden}"))
+			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
 }
