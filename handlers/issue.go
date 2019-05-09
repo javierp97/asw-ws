@@ -101,6 +101,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			j, _ := json.Marshal(issueResp)
 			w.Write(j)
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -208,6 +209,7 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"IssueDeleted":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -254,6 +256,7 @@ func VoteIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -302,6 +305,7 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
