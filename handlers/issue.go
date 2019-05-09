@@ -49,6 +49,19 @@ func checkNulls(issue models.Issue) bool {
 	return correct
 }
 
+func GetAllIssues(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		issues, _ := models.GetAllIssues()
+		j, _ := json.Marshal(issues)
+		w.WriteHeader(http.StatusOK)
+		w.Write(j)
+	}
+}
+
 func GetIssue(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
@@ -87,9 +100,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			}
 			issue.Status = "New"
 			issue.Votes = 0
-			//fmt.Println("filepath: " + issue.FilePath)
 			if checkParams(issue) == false || checkNulls(issue) == false {
-				//	fmt.Println(checkNulls(issue))
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
