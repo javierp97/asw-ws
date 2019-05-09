@@ -102,3 +102,97 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+type BodyID struct {
+	ID string `json:"id"`
+}
+
+func VoteIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			key := r.Header.Get("Authorization")
+			fmt.Println(key)
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			var voteIssue models.VotedIssue
+			voteIssue.IDIssue = uint(id)
+			voteIssue.UserID = key
+			fmt.Println("no peto")
+			if id == 0 {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"Wrong parameters"}`))
+				return
+			}
+			iss, erriss := models.FindIssueByID(voteIssue.IDIssue)
+			if erriss != nil || iss.Title == "" {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				return
+			}
+			if models.VoteIssue(voteIssue) != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The issue has been already voted"}`))
+				return
+			}
+			models.VoteThisIssue(uint(id))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"OK"}`))
+		} else {
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+		}
+	}
+}
+
+func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			key := r.Header.Get("Authorization")
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+
+			b, _ := models.IsVoted(key, uint(id))
+			if id == 0 {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"Wrong parameters"}`))
+				return
+			}
+			var voteIssue models.VotedIssue
+			voteIssue.IDIssue = uint(id)
+			voteIssue.UserID = key
+			iss, erriss := models.FindIssueByID(voteIssue.IDIssue)
+			if erriss != nil || iss.Title == "" {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				return
+			}
+			if !b {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The issue is not voted by this user"}`))
+				return
+			}
+
+			if models.UnvoteIssue(voteIssue) != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"Error voting the issue"}`))
+				return
+			}
+			models.VoteThisIssue(uint(id))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"OK"}`))
+		} else {
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+		}
+	}
+}
