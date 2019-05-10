@@ -334,7 +334,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 			exists := models.ExistsIssue(uint(id))
 
 			if exists == false {
-				w.WriteHeader(http.StatusBadRequest)
+				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte(`{"Error":"The issue does not exist"}`))
 				return
 			}
@@ -344,10 +344,71 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 			newComment.OwnerName = user.Username
 			newComment.IssueID = uint(id)
 
-			models.CreateComment(newComment)
+			commentId, _ := models.CreateCommentAndReturnId(newComment)
+			commentIdString := strconv.Itoa(int(commentId))
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"200":"OK"}`))
+			w.Write([]byte("{Ok: Issue created with id: " + commentIdString + "}"))
 			return
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
+		}
+	}
+}
+
+/*
+func EditComment(w http.ResponseWriter, r *http.Request){
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+
+
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
+		}
+}
+*/
+
+func DeleteComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			vars := mux.Vars(r)
+			//id, _ := strconv.Atoi(vars["id"])
+			commentId, _ := strconv.Atoi(vars["commentId"])
+			user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			owner, err := models.GetCommentOwnerById(uint(commentId))
+
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The comment does not exists"}`))
+				return
+			}
+
+			if owner != user.FirebaseID {
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"Error":"You are not the owner of the issue so you can not delete it"}`))
+				return
+			}
+
+			models.DeleteCommentById(uint(commentId))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"Comment deleted succesfully"}`))
 
 		} else {
 			w.WriteHeader(http.StatusForbidden)
