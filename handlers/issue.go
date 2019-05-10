@@ -310,3 +310,49 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func CreateComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newComment models.Comment
+			err := decoder.Decode(&newComment)
+
+			if err != nil {
+				panic("error")
+			}
+
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+
+			exists := models.ExistsIssue(uint(id))
+
+			if exists == false {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				return
+			}
+
+			user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			newComment.OwnerID = user.FirebaseID
+			newComment.OwnerName = user.Username
+			newComment.IssueID = uint(id)
+
+			models.CreateComment(newComment)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"OK"}`))
+			return
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
+		}
+	}
+}

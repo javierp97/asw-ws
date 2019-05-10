@@ -26,6 +26,7 @@ func main() {
 	r.HandleFunc("/api/issue/{id}/vote", handlers.UnVoteIssue).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}", handlers.DeleteIssue).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}", handlers.PutIssue).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/comments", handlers.CreateComment).Methods("POST", "OPTIONS")
 
 	//END
 	server := &http.Server{
