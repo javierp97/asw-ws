@@ -33,10 +33,7 @@ func authenticate(r *http.Request) bool {
 
 func checkParams(issue models.Issue) bool {
 	correct := true
-	//	fmt.Println(models.ExistKind(issue.Type))
-	//	fmt.Println()
 	correct = (correct && models.ExistStatus(issue.Status) && models.ExistPriority(issue.Priority) && models.ExistKind(issue.Type))
-	//	fmt.Println("check params: ", correct)
 	return correct
 }
 
@@ -96,7 +93,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&issue)
 			if err != nil {
-				panic(err) //TODO
+				w.WriteHeader(http.StatusBadRequest)
 			}
 			issue.Status = "New"
 			issue.Votes = 0
@@ -112,6 +109,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			j, _ := json.Marshal(issueResp)
 			w.Write(j)
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
