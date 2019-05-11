@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/pmoule/go2hal/hal"
 )
 
 func enableCors(w *http.ResponseWriter) {
@@ -49,8 +50,10 @@ func checkNulls(issue models.Issue) bool {
 	return correct
 }
 
+//TODO: ASSIGNEE WATCHING
 func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -58,8 +61,13 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 		filter := r.URL.Query().Get("filter")
 		if filter == "" {
 			issues, _ := models.GetAllIssues()
+			if len(issues) == 0 {
+				w.WriteHeader(http.StatusNoContent)
+			} else {
+				w.WriteHeader(http.StatusOK)
+			}
+			println("entro final")
 			j, _ := json.Marshal(issues)
-			w.WriteHeader(http.StatusOK)
 			w.Write(j)
 			return
 		} else {
@@ -109,7 +117,7 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		w.Header().Set("Content-Type", "application/json")
+
 		vars := mux.Vars(r)
 		id, _ := strconv.Atoi(vars["id"])
 		issue, err := models.FindIssueByID(uint(id))
@@ -121,8 +129,46 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Set("Content-Type", "application/json")
 		j, _ := json.Marshal(issue)
+		println(j)
+
+		//crea root
+		root := hal.NewResourceObject()
+		//añade properties y link
+		root.AddData(issue)
+		href := fmt.Sprintf("/api/issue/%d", id)
+		selfLink, _ := hal.NewLinkObject(href)
+		self, _ := hal.NewLinkRelation("self")
+		self.SetLink(selfLink)
+		root.AddLink(self)
+
+		comments, _ := models.GetAllCommentsByIssueId(uint(id))
+
+		//embeded
+		var embeddedComments []hal.Resource
+
+		for _, comment := range comments {
+			href := fmt.Sprintf("/api/comment/%d", comment.ID)
+			selfLink, _ := hal.NewLinkObject(href)
+
+			self, _ := hal.NewLinkRelation("self")
+			self.SetLink(selfLink)
+
+			embeddedComment := hal.NewResourceObject()
+			embeddedComment.AddLink(self)
+			embeddedComment.AddData(comment)
+			embeddedComments = append(embeddedComments, embeddedComment)
+		}
+
+		embComments, _ := hal.NewResourceRelation("comments")
+		embComments.SetResources(embeddedComments)
+
+		root.AddResource(embComments)
+		//response
+		encoder := hal.NewEncoder()
+		byte, _ := encoder.ToJSON(root)
+
 		w.WriteHeader(http.StatusOK)
-		w.Write(j)
+		w.Write(byte)
 	}
 }
 
@@ -280,6 +326,7 @@ func UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			}
 			vars := mux.Vars(r)
 			id, _ := strconv.Atoi(vars["id"])
+			println(id)
 			actualIssue, err := models.FindIssueByID(uint(id))
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
@@ -319,15 +366,17 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 			err := models.DeleteIssue(issue)
 
 			if err != nil || error != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"400":"Bad Request"}`))
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"IssueDeleted":"OK"}`))
+			w.Write([]byte(`{"OK":"IssueDeleted"}`))
+			return
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
 		}
 	}
 }
