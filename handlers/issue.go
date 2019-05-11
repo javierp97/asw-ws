@@ -52,10 +52,47 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		issues, _ := models.GetAllIssues()
-		j, _ := json.Marshal(issues)
-		w.WriteHeader(http.StatusOK)
-		w.Write(j)
+		filter := r.URL.Query().Get("filter")
+		if filter == "" {
+			issues, _ := models.GetAllIssues()
+			j, _ := json.Marshal(issues)
+			w.WriteHeader(http.StatusOK)
+			w.Write(j)
+			return
+		} else {
+			if filter == "mine" {
+				issues, _ := models.FindMyIssues(r.Header.Get("Authorization"))
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if filter == "open" {
+				issues, _ := models.FindOpenIssues()
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if models.ExistKind(filter) == true {
+				issues, _ := models.FindIssueByKind(filter)
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if models.ExistPriority(filter) == true {
+				issues, _ := models.FindIssueByPriority(filter)
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if models.ExistStatus(filter) == true {
+				issues, _ := models.FindIssueByStatus(filter)
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			}
+		}
+
 	}
 }
 
