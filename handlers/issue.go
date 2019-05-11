@@ -90,6 +90,10 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write(j)
 				return
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"This filter does not exist or the parameter is wrong"`))
+				return
 			}
 		}
 
