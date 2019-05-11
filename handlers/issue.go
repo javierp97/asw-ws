@@ -347,7 +347,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 			commentId, _ := models.CreateCommentAndReturnId(newComment)
 			commentIdString := strconv.Itoa(int(commentId))
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("{Ok: Issue created with id: " + commentIdString + "}"))
+			w.Write([]byte("{Ok: Comment created with id: " + commentIdString + "}"))
 			return
 
 		} else {
@@ -358,8 +358,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
-func EditComment(w http.ResponseWriter, r *http.Request){
+func EditComment(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -368,16 +367,45 @@ func EditComment(w http.ResponseWriter, r *http.Request){
 		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newComment models.Comment
+			err := decoder.Decode(&newComment)
 
+			if err != nil {
+				panic("error")
+			}
 
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["commentId"])
+
+			user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			owner, err := models.GetCommentOwnerById(uint(id))
+
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The comment does not exist"}`))
+				return
+			}
+
+			if owner != user.FirebaseID {
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"Error":"This comment is not yours"}`))
+				return
+			}
+
+			models.UpdateCommentById(uint(id), newComment.Content)
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"OK":"Comment updated succesfully}"`))
+			return
 
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 			return
 		}
+	}
 }
-*/
 
 func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
