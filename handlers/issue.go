@@ -148,12 +148,63 @@ func updateIssue(actualIssue *models.Issue, newIssue models.Issue) {
 
 }
 
-func PutIssue(w http.ResponseWriter, r *http.Request) {
+func UpdateState(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newIssue models.Issue
+			err := decoder.Decode(&newIssue)
+			if err != nil {
+				panic(err) //TODO
+			}
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			actualIssue, err := models.FindIssueByID(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The requested issue could not be found"}`))
+				return
+			}
+			if models.ExistStatus(newIssue.Status) == false {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The parameter is incorrect"}`))
+				return
+			}
+			actualIssue.Status = newIssue.Status
+			models.UpdateIssue(actualIssue)
+			var comment models.Comment
+			owner, err := models.GetCommentOwnerById(uint(id))
+			comment.Content = "The status of this issue changed to " + newIssue.Status
+			comment.OwnerID = r.Header.Get("Authorization")
+			comment.OwnerName = owner
+			comment.IssueID = uint(id)
+			models.CreateComment(comment)
+
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal(actualIssue)
+			w.Write(j)
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"Error":"You do not have access to do this request"}`))
+			return
+		}
+	}
+}
+
+func UpdateIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			decoder := json.NewDecoder(r.Body)
@@ -193,6 +244,7 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			vars := mux.Vars(r)
