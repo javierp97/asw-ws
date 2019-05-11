@@ -33,10 +33,10 @@ func authenticate(r *http.Request) bool {
 
 func checkParams(issue models.Issue) bool {
 	correct := true
-	//	fmt.Println(models.ExistKind(issue.Type))
-	//	fmt.Println()
+	fmt.Println(models.ExistKind(issue.Type))
+	fmt.Println(issue)
 	correct = (correct && models.ExistStatus(issue.Status) && models.ExistPriority(issue.Priority) && models.ExistKind(issue.Type))
-	//	fmt.Println("check params: ", correct)
+	fmt.Println("check params: ", correct)
 	return correct
 }
 
@@ -55,6 +55,7 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		vars := mux.Vars(r)
 		id, _ := strconv.Atoi(vars["id"])
 		issue, err := models.FindIssueByID(uint(id))
@@ -77,6 +78,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			var issue models.Issue
@@ -88,12 +90,21 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			issue.Status = "New"
 			issue.Votes = 0
 			//fmt.Println("filepath: " + issue.FilePath)
+			auth, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			issue.Reporter = auth.Username
 			if checkParams(issue) == false || checkNulls(issue) == false {
-				//	fmt.Println(checkNulls(issue))
+				fmt.Println(checkNulls(issue))
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"Wrong parameters"}`))
+				w.Write([]byte(`{"Error":"Wrong parameters, kind or priority is wrong"}`))
 				return
 			}
+			user, err := models.FindUserByName(issue.Assignee)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"Wrong parameters, the assignee does not exist"}`))
+				return
+			}
+			issue.Assignee = user.Username
 			id, _ := models.CreateIssue(issue)
 			issueResp, _ := models.FindIssueByID(id)
 			w.WriteHeader(http.StatusOK)
