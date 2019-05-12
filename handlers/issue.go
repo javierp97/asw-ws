@@ -665,6 +665,7 @@ func PostAttachment(w http.ResponseWriter, r *http.Request) {
 			resp, _ := json.Marshal(at)
 			w.Write([]byte(resp))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -681,54 +682,6 @@ func randToken(len int) string {
 	return fmt.Sprintf("%x", b)
 }
 
-func PutAttachment(w http.ResponseWriter, r *http.Request) {
-	enableCors(&w)
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		exists := authenticate(r)
-		if exists == true {
-			key := r.Header.Get("Authorization")
-			vars := mux.Vars(r)
-			id, _ := strconv.Atoi(vars["id"])
-
-			b, _ := models.IsVoted(key, uint(id))
-			if id == 0 {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"Wrong parameters"}`))
-				return
-			}
-			var voteIssue models.VotedIssue
-			voteIssue.IDIssue = uint(id)
-			voteIssue.UserID = key
-			iss, erriss := models.FindIssueByID(voteIssue.IDIssue)
-			if erriss != nil || iss.Title == "" {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"The issue does not exist"}`))
-				return
-			}
-			if !b {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"The issue is not voted by this user"}`))
-				return
-			}
-
-			if models.UnvoteIssue(voteIssue) != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"Error voting the issue"}`))
-				return
-			}
-			models.VoteThisIssue(uint(id))
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"200":"OK"}`))
-		} else {
-			w.Write([]byte(`{"403":"Forbbiden"}`))
-		}
-	}
-}
-
 func DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
@@ -738,40 +691,36 @@ func DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
-			key := r.Header.Get("Authorization")
 			vars := mux.Vars(r)
-			id, _ := strconv.Atoi(vars["id"])
-
-			b, _ := models.IsVoted(key, uint(id))
-			if id == 0 {
+			idiss, _ := strconv.Atoi(vars["id"])
+			if idiss == 0 {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
 			}
-			var voteIssue models.VotedIssue
-			voteIssue.IDIssue = uint(id)
-			voteIssue.UserID = key
-			iss, erriss := models.FindIssueByID(voteIssue.IDIssue)
-			if erriss != nil || iss.Title == "" {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"The issue does not exist"}`))
-				return
-			}
-			if !b {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"The issue is not voted by this user"}`))
-				return
-			}
+			idatt, _ := strconv.Atoi(vars["idattach"])
 
-			if models.UnvoteIssue(voteIssue) != nil {
+			if idatt == 0 {
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"Error voting the issue"}`))
+				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
 			}
-			models.VoteThisIssue(uint(id))
+			att, err := models.FindAttachment(uint(idatt))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"Attachment Not Found"}`))
+				return
+			}
+			errdel := models.DeleteAttachment(att)
+			if errdel != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Error deleting the attachment"}`))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
