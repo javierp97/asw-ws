@@ -143,6 +143,11 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 
 		comments, _ := models.GetAllCommentsByIssueId(uint(id))
 
+		UserID := issue.Reporter
+		userInfo, _ := models.FindUserByName(UserID)
+
+		println(userInfo.ID)
+
 		//embeded
 		var embeddedComments []hal.Resource
 
@@ -163,6 +168,24 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 		embComments.SetResources(embeddedComments)
 
 		root.AddResource(embComments)
+
+		//user
+		hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+		selfLinkU, _ := hal.NewLinkObject(hrefU)
+
+		selfU, _ := hal.NewLinkRelation("self")
+		selfU.SetLink(selfLinkU)
+
+		embeddedUser := hal.NewResourceObject()
+		embeddedUser.AddLink(selfU)
+		embeddedUser.AddData(userInfo)
+		println(userInfo.Username)
+
+		embUser, _ := hal.NewResourceRelation("user")
+		embUser.SetResource(embeddedUser)
+
+		root.AddResource(embUser)
+
 		//response
 		encoder := hal.NewEncoder()
 		byte, _ := encoder.ToJSON(root)
@@ -251,11 +274,11 @@ func updateIssue(actualIssue *models.Issue, newIssue models.Issue) {
 		actualIssue.Assignee = assig
 	}
 
-	file := newIssue.FilePath
+	//file := newIssue.FilePath
 
-	if file != "" {
-		actualIssue.FilePath = file
-	}
+	//if file != "" {
+	//	actualIssue.FilePath = file
+	//}
 
 }
 
