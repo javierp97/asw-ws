@@ -24,6 +24,9 @@ func main() {
 	r.HandleFunc("/api/issue", handlers.CreateIssue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/vote", handlers.VoteIssue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/vote", handlers.UnVoteIssue).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/attach", handlers.PostAttachment).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/attach", handlers.PutAttachment).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/attach", handlers.DeleteAttachment).Methods("DELETE", "OPTIONS")
 
 	//END
 	server := &http.Server{
