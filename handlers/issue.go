@@ -37,10 +37,10 @@ func authenticate(r *http.Request) bool {
 
 func checkParams(issue models.Issue) bool {
 	correct := true
-	//	fmt.Println(models.ExistKind(issue.Type))
-	//	fmt.Println()
+	fmt.Println(models.ExistKind(issue.Type))
+	fmt.Println(issue)
 	correct = (correct && models.ExistStatus(issue.Status) && models.ExistPriority(issue.Priority) && models.ExistKind(issue.Type))
-	//	fmt.Println("check params: ", correct)
+	fmt.Println("check params: ", correct)
 	return correct
 }
 
@@ -53,12 +53,67 @@ func checkNulls(issue models.Issue) bool {
 	return correct
 }
 
+func GetAllIssues(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		filter := r.URL.Query().Get("filter")
+		if filter == "" {
+			issues, _ := models.GetAllIssues()
+			j, _ := json.Marshal(issues)
+			w.WriteHeader(http.StatusOK)
+			w.Write(j)
+			return
+		} else {
+			if filter == "mine" {
+				issues, _ := models.FindMyIssues(r.Header.Get("Authorization"))
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if filter == "open" {
+				issues, _ := models.FindOpenIssues()
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if models.ExistKind(filter) == true {
+				issues, _ := models.FindIssueByKind(filter)
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if models.ExistPriority(filter) == true {
+				issues, _ := models.FindIssueByPriority(filter)
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else if models.ExistStatus(filter) == true {
+				issues, _ := models.FindIssueByStatus(filter)
+				j, _ := json.Marshal(issues)
+				w.WriteHeader(http.StatusOK)
+				w.Write(j)
+				return
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"This filter does not exist or the parameter is wrong"`))
+				return
+			}
+		}
+
+	}
+}
+
 func GetIssue(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		vars := mux.Vars(r)
 		id, _ := strconv.Atoi(vars["id"])
 		issue, err := models.FindIssueByID(uint(id))
@@ -81,22 +136,33 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			var issue models.Issue
 			decoder := json.NewDecoder(r.Body)
 			err := decoder.Decode(&issue)
 			if err != nil {
-				panic(err) //TODO
+				w.WriteHeader(http.StatusBadRequest)
 			}
 			issue.Status = "New"
 			issue.Votes = 0
+			//fmt.Println("filepath: " + issue.FilePath)
+			auth, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			issue.Reporter = auth.Username
 			if checkParams(issue) == false || checkNulls(issue) == false {
-				//	fmt.Println(checkNulls(issue))
+				fmt.Println(checkNulls(issue))
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"Wrong parameters"}`))
+				w.Write([]byte(`{"Error":"Wrong parameters, kind or priority is wrong"}`))
 				return
 			}
+			user, err := models.FindUserByName(issue.Assignee)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"Wrong parameters, the assignee does not exist"}`))
+				return
+			}
+			issue.Assignee = user.Username
 			id, _ := models.CreateIssue(issue)
 			issueResp, _ := models.FindIssueByID(id)
 			w.WriteHeader(http.StatusOK)
@@ -104,6 +170,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			j, _ := json.Marshal(issueResp)
 			w.Write(j)
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -144,12 +211,63 @@ func updateIssue(actualIssue *models.Issue, newIssue models.Issue) {
 
 }
 
-func PutIssue(w http.ResponseWriter, r *http.Request) {
+func UpdateState(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newIssue models.Issue
+			err := decoder.Decode(&newIssue)
+			if err != nil {
+				panic(err) //TODO
+			}
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			actualIssue, err := models.FindIssueByID(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The requested issue could not be found"}`))
+				return
+			}
+			if models.ExistStatus(newIssue.Status) == false {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The parameter is incorrect"}`))
+				return
+			}
+			actualIssue.Status = newIssue.Status
+			models.UpdateIssue(actualIssue)
+			var comment models.Comment
+			owner, err := models.GetCommentOwnerById(uint(id))
+			comment.Content = "The status of this issue changed to " + newIssue.Status
+			comment.OwnerID = r.Header.Get("Authorization")
+			comment.OwnerName = owner
+			comment.IssueID = uint(id)
+			models.CreateComment(comment)
+
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal(actualIssue)
+			w.Write(j)
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"Error":"You do not have access to do this request"}`))
+			return
+		}
+	}
+}
+
+func UpdateIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			decoder := json.NewDecoder(r.Body)
@@ -189,6 +307,7 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			vars := mux.Vars(r)
@@ -205,6 +324,7 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"IssueDeleted":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -251,6 +371,7 @@ func VoteIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -299,7 +420,143 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
+		}
+	}
+}
+
+func CreateComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newComment models.Comment
+			err := decoder.Decode(&newComment)
+
+			if err != nil {
+				panic("error")
+			}
+
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+
+			exists := models.ExistsIssue(uint(id))
+
+			if exists == false {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				return
+			}
+
+			user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			newComment.OwnerID = user.FirebaseID
+			newComment.OwnerName = user.Username
+			newComment.IssueID = uint(id)
+
+			commentId, _ := models.CreateCommentAndReturnId(newComment)
+			commentIdString := strconv.Itoa(int(commentId))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("{Ok: Comment created with id: " + commentIdString + "}"))
+			return
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
+		}
+	}
+}
+
+func EditComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			decoder := json.NewDecoder(r.Body)
+			var newComment models.Comment
+			err := decoder.Decode(&newComment)
+
+			if err != nil {
+				panic("error")
+			}
+
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["commentId"])
+
+			user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			owner, err := models.GetCommentOwnerById(uint(id))
+
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The comment does not exist"}`))
+				return
+			}
+
+			if owner != user.FirebaseID {
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"Error":"This comment is not yours"}`))
+				return
+			}
+
+			models.UpdateCommentById(uint(id), newComment.Content)
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"OK":"Comment updated succesfully}"`))
+			return
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
+		}
+	}
+}
+
+func DeleteComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			vars := mux.Vars(r)
+			//id, _ := strconv.Atoi(vars["id"])
+			commentId, _ := strconv.Atoi(vars["commentId"])
+			user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+			owner, err := models.GetCommentOwnerById(uint(commentId))
+
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The comment does not exists"}`))
+				return
+			}
+
+			if owner != user.FirebaseID {
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"Error":"You are not the owner of the issue so you can not delete it"}`))
+				return
+			}
+
+			models.DeleteCommentById(uint(commentId))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"Comment deleted succesfully"}`))
+
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
 		}
 	}
 }

@@ -21,14 +21,19 @@ func main() {
 
 	//Functions to implement
 	r.HandleFunc("/api/issue/{id}", handlers.GetIssue).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/issue", handlers.GetAllIssues).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/issue", handlers.CreateIssue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/vote", handlers.VoteIssue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/vote", handlers.UnVoteIssue).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}", handlers.DeleteIssue).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/issue/{id}", handlers.PutIssue).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/attach", handlers.PostAttachment).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/attach", handlers.PutAttachment).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/attach", handlers.DeleteAttachment).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}", handlers.UpdateIssue).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/state", handlers.UpdateState).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/comments", handlers.CreateComment).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/comments/{commentId}", handlers.DeleteComment).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/issue/{id}/comments/{commentId}", handlers.EditComment).Methods("PUT", "OPTIONS")
 
 	//END
 	server := &http.Server{
