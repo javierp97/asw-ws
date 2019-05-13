@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -61,50 +62,115 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 	} else {
 		exists := authenticate(r)
 		if exists == true {
+			w.Header().Set("Content-Type", "application/json")
 			filter := r.URL.Query().Get("filter")
-			if filter == "" {
-				issues, _ := models.GetAllIssues()
-				j, _ := json.Marshal(issues)
-				w.WriteHeader(http.StatusOK)
-				w.Write(j)
-				return
+			var j []byte
+			var issues []models.Issue
+			if filter == "mine" {
+				user, _ := models.FindUserByID(r.Header.Get("Authorization"))
+				issues, _ = models.FindMyIssues(user.Username)
+				j, _ = json.Marshal(issues)
+
+			} else if filter == "open" {
+				issues, _ = models.FindOpenIssues()
+				j, _ = json.Marshal(issues)
+
+			} else if models.ExistKind(filter) == true {
+				issues, _ = models.FindIssueByKind(filter)
+				j, _ = json.Marshal(issues)
+
+			} else if models.ExistPriority(filter) == true {
+				issues, _ = models.FindIssueByPriority(filter)
+				j, _ = json.Marshal(issues)
+
+			} else if models.ExistStatus(filter) == true {
+				issues, _ = models.FindIssueByStatus(filter)
+				j, _ = json.Marshal(issues)
+
+			} else if filter == "watching" {
+				watchedIssues, _ := models.FindWatchedIssues(r.Header.Get("Authorization"))
+				for _, w := range watchedIssues {
+					issue, _ := models.FindIssueByID(w.ID)
+					issues = append(issues, issue)
+				}
+				j, _ = json.Marshal(issues)
+
+			} else if filter == "" {
+				issues, _ = models.GetAllIssues()
+				j, _ = json.Marshal(issues)
+
+			} else if models.FindUserByNameNoError(filter).FirebaseID != "" {
+				issues, _ = models.FindIssueByAssignee(filter)
+				j, _ = json.Marshal(issues)
+
 			} else {
-				if filter == "mine" {
-					issues, _ := models.FindMyIssues(r.Header.Get("Authorization"))
-					j, _ := json.Marshal(issues)
-					w.WriteHeader(http.StatusOK)
-					w.Write(j)
-					return
-				} else if filter == "open" {
-					issues, _ := models.FindOpenIssues()
-					j, _ := json.Marshal(issues)
-					w.WriteHeader(http.StatusOK)
-					w.Write(j)
-					return
-				} else if models.ExistKind(filter) == true {
-					issues, _ := models.FindIssueByKind(filter)
-					j, _ := json.Marshal(issues)
-					w.WriteHeader(http.StatusOK)
-					w.Write(j)
-					return
-				} else if models.ExistPriority(filter) == true {
-					issues, _ := models.FindIssueByPriority(filter)
-					j, _ := json.Marshal(issues)
-					w.WriteHeader(http.StatusOK)
-					w.Write(j)
-					return
-				} else if models.ExistStatus(filter) == true {
-					issues, _ := models.FindIssueByStatus(filter)
-					j, _ := json.Marshal(issues)
-					w.WriteHeader(http.StatusOK)
-					w.Write(j)
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"This filter does not exist or the parameter is wrong"`))
+				return
+			}
+
+			//ONCE WE HAVE THE DESIRED SET OF ISSUES WE ORDER THEM
+			order := r.URL.Query().Get("order")
+			if order != "" {
+				direction := r.URL.Query().Get("direction")
+				if direction == "" {
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte(`{"Error":"The order has value but the direction is empty"`))
 					return
 				} else {
-					w.WriteHeader(http.StatusBadRequest)
-					w.Write([]byte(`{"Error":"This filter does not exist or the parameter is wrong"`))
-					return
+					if order == "title" && direction == "asc" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Title > issues[j].Title
+						})
+					} else if order == "title" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Title <= issues[j].Title
+						})
+					} else if order == "kind" && direction == "asc" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Type > issues[j].Type
+						})
+					} else if order == "kind" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Type <= issues[j].Type
+						})
+					} else if order == "priority" && direction == "asc" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Priority > issues[j].Priority
+						})
+					} else if order == "priority" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Priority <= issues[j].Priority
+						})
+					} else if order == "status" && direction == "asc" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Status > issues[j].Status
+						})
+					} else if order == "status" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Status <= issues[j].Status
+						})
+					} else if order == "votes" && direction == "asc" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Votes > issues[j].Votes
+						})
+					} else if order == "votes" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Votes <= issues[j].Votes
+						})
+					} else if order == "assignee" && direction == "asc" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Assignee > issues[j].Assignee
+						})
+					} else if order == "assignee" {
+						sort.SliceStable(issues, func(i, j int) bool {
+							return issues[i].Assignee <= issues[j].Assignee
+						})
+					}
 				}
 			}
+			w.WriteHeader(http.StatusOK)
+			w.Write(j)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"Error":"You do not have access to do this request "}`))
@@ -459,8 +525,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 			j, _ := json.Marshal(comment)
 			w.WriteHeader(http.StatusOK)
 			w.Write(j)
-		}
-		else {
+		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"Error":"You do not have access to do this request"`))
 		}
