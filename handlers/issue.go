@@ -46,7 +46,7 @@ func checkParams(issue models.Issue) bool {
 
 func checkNulls(issue models.Issue) bool {
 	correct := true
-	if issue.Title == "" || issue.Description == "" || issue.Priority == "" || issue.Type == "" || issue.Assignee == "" || issue.Reporter == "" {
+	if issue.Title == "" || issue.Description == "" || issue.Priority == "" || issue.Type == "" {
 		correct = false
 	}
 	//fmt.Println("check nuls: ", correct)
@@ -59,49 +59,55 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		filter := r.URL.Query().Get("filter")
-		if filter == "" {
-			issues, _ := models.GetAllIssues()
-			j, _ := json.Marshal(issues)
-			w.WriteHeader(http.StatusOK)
-			w.Write(j)
-			return
-		} else {
-			if filter == "mine" {
-				issues, _ := models.FindMyIssues(r.Header.Get("Authorization"))
-				j, _ := json.Marshal(issues)
-				w.WriteHeader(http.StatusOK)
-				w.Write(j)
-				return
-			} else if filter == "open" {
-				issues, _ := models.FindOpenIssues()
-				j, _ := json.Marshal(issues)
-				w.WriteHeader(http.StatusOK)
-				w.Write(j)
-				return
-			} else if models.ExistKind(filter) == true {
-				issues, _ := models.FindIssueByKind(filter)
-				j, _ := json.Marshal(issues)
-				w.WriteHeader(http.StatusOK)
-				w.Write(j)
-				return
-			} else if models.ExistPriority(filter) == true {
-				issues, _ := models.FindIssueByPriority(filter)
-				j, _ := json.Marshal(issues)
-				w.WriteHeader(http.StatusOK)
-				w.Write(j)
-				return
-			} else if models.ExistStatus(filter) == true {
-				issues, _ := models.FindIssueByStatus(filter)
+		exists := authenticate(r)
+		if exists == true {
+			filter := r.URL.Query().Get("filter")
+			if filter == "" {
+				issues, _ := models.GetAllIssues()
 				j, _ := json.Marshal(issues)
 				w.WriteHeader(http.StatusOK)
 				w.Write(j)
 				return
 			} else {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"This filter does not exist or the parameter is wrong"`))
-				return
+				if filter == "mine" {
+					issues, _ := models.FindMyIssues(r.Header.Get("Authorization"))
+					j, _ := json.Marshal(issues)
+					w.WriteHeader(http.StatusOK)
+					w.Write(j)
+					return
+				} else if filter == "open" {
+					issues, _ := models.FindOpenIssues()
+					j, _ := json.Marshal(issues)
+					w.WriteHeader(http.StatusOK)
+					w.Write(j)
+					return
+				} else if models.ExistKind(filter) == true {
+					issues, _ := models.FindIssueByKind(filter)
+					j, _ := json.Marshal(issues)
+					w.WriteHeader(http.StatusOK)
+					w.Write(j)
+					return
+				} else if models.ExistPriority(filter) == true {
+					issues, _ := models.FindIssueByPriority(filter)
+					j, _ := json.Marshal(issues)
+					w.WriteHeader(http.StatusOK)
+					w.Write(j)
+					return
+				} else if models.ExistStatus(filter) == true {
+					issues, _ := models.FindIssueByStatus(filter)
+					j, _ := json.Marshal(issues)
+					w.WriteHeader(http.StatusOK)
+					w.Write(j)
+					return
+				} else {
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte(`{"Error":"This filter does not exist or the parameter is wrong"`))
+					return
+				}
 			}
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"Error":"You do not have access to do this request "}`))
 		}
 
 	}
@@ -110,23 +116,29 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 func GetIssue(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
-		w.Header().Set("Content-Type", "application/json")
-		vars := mux.Vars(r)
-		id, _ := strconv.Atoi(vars["id"])
-		issue, err := models.FindIssueByID(uint(id))
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"Error":"The requested issue could not be found"}`))
-			return
-		}
+		exists := authenticate(r)
+		if exists == true {
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			issue, err := models.FindIssueByID(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The requested issue could not be found"}`))
+				return
+			}
 
-		w.Header().Set("Content-Type", "application/json")
-		j, _ := json.Marshal(issue)
-		w.WriteHeader(http.StatusOK)
-		w.Write(j)
+			w.Header().Set("Content-Type", "application/json")
+			j, _ := json.Marshal(issue)
+			w.WriteHeader(http.StatusOK)
+			w.Write(j)
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"Error":"You do not have access to do this request "}`))
+		}
 	}
 }
 
@@ -171,7 +183,7 @@ func CreateIssue(w http.ResponseWriter, r *http.Request) {
 			w.Write(j)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(`{"403":"Forbbiden"}`))
+			w.Write([]byte(`{"Error":"You do not have access to do this request"}`))
 		}
 	}
 }
@@ -422,6 +434,35 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
+		}
+	}
+}
+
+func GetComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		exists := authenticate(r)
+		if exists == true {
+			w.Header().Set("Content-Type", "application/json")
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["commentId"])
+			comment, err := models.GetCommentById(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The comment does not exist"}`))
+				return
+			}
+
+			j, _ := json.Marshal(comment)
+			w.WriteHeader(http.StatusOK)
+			w.Write(j)
+		}
+		else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"Error":"You do not have access to do this request"`))
 		}
 	}
 }
