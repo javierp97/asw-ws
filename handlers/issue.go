@@ -854,3 +854,38 @@ func UnWatchIssue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+type UserInfo struct {
+	Name string
+	ID   string
+}
+
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		usrs, err := models.GetAllUsers()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"Error":"Proccessing the request"}`))
+			return
+		}
+		var resp []UserInfo
+		for _, usr := range usrs {
+			var tmp UserInfo
+			tmp.ID = usr.FirebaseID
+			tmp.Name = usr.Username
+			resp = append(resp, tmp)
+		}
+		out, errm := json.Marshal(resp)
+		if errm != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"Error":"Proccessing the request"}`))
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(out))
+	}
+}
