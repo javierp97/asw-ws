@@ -88,13 +88,18 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				j, _ = json.Marshal(issues)
 
 			} else if filter == "watching" {
+				println("entro watching filter")
 				watchedIssues, _ := models.FindWatchedIssues(r.Header.Get("Authorization"))
+				println("watched: ")
+				println(watchedIssues)
 				for _, w := range watchedIssues {
-					issue, _ := models.FindIssueByID(w.ID)
+					issue, _ := models.FindIssueByID(w.IDIssue)
 					issues = append(issues, issue)
 				}
-				j, _ = json.Marshal(issues)
+				println("issues: ")
 
+				j, _ = json.Marshal(issues)
+				println(issues)
 			} else if filter == "" {
 				issues, _ = models.GetAllIssues()
 				j, _ = json.Marshal(issues)
