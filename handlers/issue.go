@@ -426,6 +426,28 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetComment(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		vars := mux.Vars(r)
+		id, _ := strconv.Atoi(vars["commentId"])
+		comment, err := models.GetCommentById(uint(id))
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"Error":"The comment does not exist"}`))
+			return
+		}
+
+		j, _ := json.Marshal(comment)
+		w.WriteHeader(http.StatusOK)
+		w.Write(j)
+	}
+}
+
 func CreateComment(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {

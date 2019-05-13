@@ -34,6 +34,7 @@ func main() {
 	r.HandleFunc("/api/issue/{id}/comments", handlers.CreateComment).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/comments/{commentId}", handlers.DeleteComment).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/comments/{commentId}", handlers.EditComment).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/comments/{commentId}", handlers.GetComment).Methods("GET", "OPTIONS")
 
 	//END
 	server := &http.Server{
