@@ -776,3 +776,81 @@ func DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func WatchIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			key := r.Header.Get("Authorization")
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			b := models.ExistsIssue(uint(id))
+			if !b {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				return
+			}
+			bwatch, _ := models.IsWatched(key, uint(id))
+			if bwatch {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The issue is already watched by this user"}`))
+				return
+			}
+			err := models.WatchIssue(uint(id), key)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Watching was not possible"}`))
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"OK"}`))
+		} else {
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+		}
+	}
+}
+
+func UnWatchIssue(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		exists := authenticate(r)
+		if exists == true {
+			key := r.Header.Get("Authorization")
+			vars := mux.Vars(r)
+			id, _ := strconv.Atoi(vars["id"])
+			b := models.ExistsIssue(uint(id))
+			if !b {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				return
+			}
+			bwatch, _ := models.IsWatched(key, uint(id))
+			if !bwatch {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"Error":"The issue is not watched by this user"}`))
+				return
+			}
+			err := models.UnwatchIssue(uint(id), key)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"UnWatching was not possible"}`))
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"200":"OK"}`))
+		} else {
+			w.Write([]byte(`{"403":"Forbbiden"}`))
+		}
+	}
+}
