@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/pmoule/go2hal/hal"
 )
 
 func enableCors(w *http.ResponseWriter) {
@@ -54,8 +55,10 @@ func checkNulls(issue models.Issue) bool {
 	return correct
 }
 
+//TODO: ASSIGNEE WATCHING
 func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
+	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -204,11 +207,72 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 
 			w.Header().Set("Content-Type", "application/json")
 			j, _ := json.Marshal(issue)
+			println(j)
+
+			//crea root
+			root := hal.NewResourceObject()
+			//añade properties y link
+			root.AddData(issue)
+			href := fmt.Sprintf("/api/issue/%d", id)
+			selfLink, _ := hal.NewLinkObject(href)
+			self, _ := hal.NewLinkRelation("self")
+			self.SetLink(selfLink)
+			root.AddLink(self)
+
+			comments, _ := models.GetAllCommentsByIssueId(uint(id))
+
+			UserID := issue.Reporter
+			userInfo, _ := models.FindUserByName(UserID)
+
+			println(userInfo.ID)
+
+			//embeded
+			var embeddedComments []hal.Resource
+
+			for _, comment := range comments {
+				href := fmt.Sprintf("/api/comment/%d", comment.ID)
+				selfLink, _ := hal.NewLinkObject(href)
+
+				self, _ := hal.NewLinkRelation("self")
+				self.SetLink(selfLink)
+
+				embeddedComment := hal.NewResourceObject()
+				embeddedComment.AddLink(self)
+				embeddedComment.AddData(comment)
+				embeddedComments = append(embeddedComments, embeddedComment)
+			}
+
+			embComments, _ := hal.NewResourceRelation("comments")
+			embComments.SetResources(embeddedComments)
+
+			root.AddResource(embComments)
+
+			//user
+			hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+			selfLinkU, _ := hal.NewLinkObject(hrefU)
+
+			selfU, _ := hal.NewLinkRelation("self")
+			selfU.SetLink(selfLinkU)
+
+			embeddedUser := hal.NewResourceObject()
+			embeddedUser.AddLink(selfU)
+			embeddedUser.AddData(userInfo)
+			println(userInfo.Username)
+
+			embUser, _ := hal.NewResourceRelation("user")
+			embUser.SetResource(embeddedUser)
+
+			root.AddResource(embUser)
+
+			//response
+			encoder := hal.NewEncoder()
+			byte, _ := encoder.ToJSON(root)
+
 			w.WriteHeader(http.StatusOK)
-			w.Write(j)
+			w.Write(byte)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(`{"Error":"You do not have access to do this request "}`))
+			w.Write([]byte(`{"Error":"You do not have access to do this request"}`))
 		}
 	}
 }
@@ -291,7 +355,6 @@ func updateIssue(actualIssue *models.Issue, newIssue models.Issue) {
 	if assig != "" {
 		actualIssue.Assignee = assig
 	}
-
 }
 
 func UpdateState(w http.ResponseWriter, r *http.Request) {
@@ -366,6 +429,7 @@ func UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			}
 			vars := mux.Vars(r)
 			id, _ := strconv.Atoi(vars["id"])
+			println(id)
 			actualIssue, err := models.FindIssueByID(uint(id))
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
@@ -415,10 +479,12 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"IssueDeleted":"OK"}`))
+			w.Write([]byte(`{"OK":"IssueDeleted"}`))
+			return
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
+			return
 		}
 	}
 }
