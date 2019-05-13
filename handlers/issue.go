@@ -323,7 +323,12 @@ func UpdateState(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			actualIssue.Status = newIssue.Status
-			models.UpdateIssue(actualIssue)
+			error := models.UpdateIssue(actualIssue)
+			if error != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Updating status was not possible"}`))
+				return
+			}
 			var comment models.Comment
 			owner, err := models.GetCommentOwnerById(uint(id))
 			comment.Content = "The status of this issue changed to " + newIssue.Status
@@ -399,9 +404,14 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(error)
 			err := models.DeleteIssue(issue)
 
-			if err != nil || error != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"400":"Bad Request"}`))
+			if error != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"404":"Not found the issue"}`))
+				return
+			}
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"500":"Server error"}`))
 				return
 			}
 			w.WriteHeader(http.StatusOK)
@@ -450,7 +460,12 @@ func VoteIssue(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(`{"Error":"The issue has been already voted"}`))
 				return
 			}
-			models.VoteThisIssue(uint(id))
+			err := models.VoteThisIssue(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Voting was not possible"}`))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
@@ -499,7 +514,12 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(`{"Error":"Error voting the issue"}`))
 				return
 			}
-			models.VoteThisIssue(uint(id))
+			err := models.VoteThisIssue(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"UnVoting was not possible"}`))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
@@ -660,7 +680,12 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			models.DeleteCommentById(uint(commentId))
+			error := models.DeleteCommentById(uint(commentId))
+			if error != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Server error"}`))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"Comment deleted succesfully"}`))
 
@@ -851,7 +876,7 @@ func DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		if exists == true {
 			key := r.Header.Get("Authorization")
 			vars := mux.Vars(r)
-			id, _ := strconv.Atoi(vars["id"])
+			id, _ := strconv.Atoi(vars["idattach"])
 
 			b, _ := models.IsVoted(key, uint(id))
 			if id == 0 {
