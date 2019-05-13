@@ -597,15 +597,17 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 
 func GetComment(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
+
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
+		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
 			w.Header().Set("Content-Type", "application/json")
 			vars := mux.Vars(r)
-			id, _ := strconv.Atoi(vars["commentId"])
+			id, _ := strconv.Atoi(vars["commentId"]) //id del comment
 			comment, err := models.GetCommentById(uint(id))
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
@@ -614,8 +616,70 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 			}
 
 			j, _ := json.Marshal(comment)
+			println(j)
+
+			//crea root
+			root := hal.NewResourceObject()
+			//añade properties y link
+			root.AddData(comment)
+			href := fmt.Sprintf("/api/comment/%d", id)
+			selfLink, _ := hal.NewLinkObject(href)
+			self, _ := hal.NewLinkRelation("self")
+			self.SetLink(selfLink)
+			root.AddLink(self)
+
+			//comments, _ := models.GetAllCommentsByIssueId(uint(id))
+
+			issueID := comment.IssueID
+			actualIssue, _ := models.FindIssueByID(uint(issueID)) //info de la issue
+
+			userInfo, _ := models.FindUserByName(actualIssue.Reporter) //agafo info usu a partir del nom del reporter
+
+			println(userInfo.ID)
+
+			//embeded issue
+			hrefIssue := fmt.Sprintf("/api/user/%d", issueID)
+			selfLinkIssue, _ := hal.NewLinkObject(hrefIssue)
+
+			selfIssue, _ := hal.NewLinkRelation("self")
+			selfIssue.SetLink(selfLinkIssue)
+
+			embeddedIssue := hal.NewResourceObject()
+			embeddedIssue.AddLink(selfIssue)
+			embeddedIssue.AddData(actualIssue)
+			println(userInfo.Username)
+
+			embIssue, _ := hal.NewResourceRelation("issue")
+			embIssue.SetResource(embeddedIssue)
+
+			root.AddResource(embIssue)
+
+			//embdeded user
+			hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+			selfLinkU, _ := hal.NewLinkObject(hrefU)
+
+			selfU, _ := hal.NewLinkRelation("self")
+			selfU.SetLink(selfLinkU)
+
+			embeddedUser := hal.NewResourceObject()
+			embeddedUser.AddLink(selfU)
+			embeddedUser.AddData(userInfo)
+			println(userInfo.Username)
+
+			embUser, _ := hal.NewResourceRelation("user")
+			embUser.SetResource(embeddedUser)
+
+			root.AddResource(embUser)
+
+			//response
+			encoder := hal.NewEncoder()
+			byte, _ := encoder.ToJSON(root)
+
 			w.WriteHeader(http.StatusOK)
-			w.Write(j)
+			w.Write(byte)
+
+			//w.WriteHeader(http.StatusOK)
+			//w.Write(j)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"Error":"You do not have access to do this request"`))
