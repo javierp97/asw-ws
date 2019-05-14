@@ -68,6 +68,7 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			filter := r.URL.Query().Get("filter")
 			var j []byte
+			fmt.Println(j)
 			var issues []models.Issue
 			if filter == "mine" {
 				user, _ := models.FindUserByID(r.Header.Get("Authorization"))
@@ -177,8 +178,61 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+
+			var issuesHal [][]byte
+			//AQUI TINC EL VECTOR DE ISSUES PER EMBEDEAR EN CADA UN
+			root := hal.NewResourceObject()
+
+			for _, issue := range issues {
+
+				//crea root
+
+				//añade properties y link
+				root.AddData(issue)
+				href := fmt.Sprintf("/api/issue/%d", issue.ID) //TODO: aqui quin link poso ? col.lectiu o indiv
+				selfLink, _ := hal.NewLinkObject(href)
+				self, _ := hal.NewLinkRelation("self")
+				self.SetLink(selfLink)
+				root.AddLink(self)
+
+				UserID := issue.Reporter
+				userInfo, _ := models.FindUserByName(UserID)
+
+				println(userInfo.ID)
+
+				//embeded user
+				hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+				selfLinkU, _ := hal.NewLinkObject(hrefU)
+
+				selfU, _ := hal.NewLinkRelation("self")
+				selfU.SetLink(selfLinkU)
+
+				embeddedUser := hal.NewResourceObject()
+				embeddedUser.AddLink(selfU)
+				embeddedUser.AddData(userInfo)
+				println(userInfo.Username)
+
+				embUser, _ := hal.NewResourceRelation("user")
+				embUser.SetResource(embeddedUser)
+
+				root.AddResource(embUser)
+
+				encoder := hal.NewEncoder()
+				byte, _ := encoder.ToJSON(root)
+
+				issuesHal = append(issuesHal, byte)
+				//response
+
+			}
+
 			w.WriteHeader(http.StatusOK)
-			w.Write(j)
+			for _, isHal := range issuesHal {
+
+				w.Write(isHal)
+
+			}
+			//w.WriteHeader(http.StatusOK)
+			//w.Write(j)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"Error":"You do not have access to do this request "}`))

@@ -2,11 +2,12 @@ package main
 
 import (
 	"asw-project/models"
-	"asw-ws/handlers"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"../asw-ws/handlers"
 
 	"github.com/gorilla/mux"
 )
