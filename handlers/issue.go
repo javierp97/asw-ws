@@ -58,14 +58,14 @@ func checkNulls(issue models.Issue) bool {
 //TODO: ASSIGNEE WATCHING
 func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	w.Header().Set("Content-Type", "application/json")
+
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	} else {
 		exists := authenticate(r)
 		if exists == true {
-			w.Header().Set("Content-Type", "application/json")
+
 			filter := r.URL.Query().Get("filter")
 			var j []byte
 			fmt.Println(j)
@@ -179,10 +179,10 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			//var issuesHal [][]byte
+			issuesHal := []byte(`[`)
 			//AQUI TINC EL VECTOR DE ISSUES PER EMBEDEAR EN CADA UN
 			root := hal.NewResourceObject()
-
+			first := true
 			for _, issue := range issues {
 
 				//crea root
@@ -218,20 +218,32 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				root.AddResource(embUser)
 
 				encoder := hal.NewEncoder()
-				byte, _ := encoder.ToJSON(root)
+				byteJson, _ := encoder.ToJSON(root)
 
-				w.WriteHeader(http.StatusOK)
+				/*w.WriteHeader(http.StatusOK)
 				w.Write(byte)
+				*/
+				if first {
+					first = false
+				} else {
+					comaJ := []byte(`,`)
+					for _, coma := range comaJ {
+						issuesHal = append(issuesHal, coma)
+					}
+				}
 
-				//issuesHal = append(issuesHal, byte)
-				//response
-
+				for _, b := range byteJson {
+					issuesHal = append(issuesHal, b)
+				}
 			}
-
-			//w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
 			//for _, isHal := range issuesHal {
-
-			//w.Write(isHal)
+			f := []byte(`]`)
+			for _, bi := range f {
+				issuesHal = append(issuesHal, bi)
+			}
+			w.Write(issuesHal)
 
 			//	}
 			//w.WriteHeader(http.StatusOK)
