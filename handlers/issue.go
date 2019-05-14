@@ -179,7 +179,7 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			var issuesHal [][]byte
+			//var issuesHal [][]byte
 			//AQUI TINC EL VECTOR DE ISSUES PER EMBEDEAR EN CADA UN
 			root := hal.NewResourceObject()
 
@@ -220,17 +220,20 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				encoder := hal.NewEncoder()
 				byte, _ := encoder.ToJSON(root)
 
-				issuesHal = append(issuesHal, byte)
+				w.WriteHeader(http.StatusOK)
+				w.Write(byte)
+
+				//issuesHal = append(issuesHal, byte)
 				//response
 
 			}
 
-			w.WriteHeader(http.StatusOK)
-			for _, isHal := range issuesHal {
+			//w.WriteHeader(http.StatusOK)
+			//for _, isHal := range issuesHal {
 
-				w.Write(isHal)
+			//w.Write(isHal)
 
-			}
+			//	}
 			//w.WriteHeader(http.StatusOK)
 			//w.Write(j)
 		} else {
