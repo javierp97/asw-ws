@@ -275,6 +275,8 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 
 			comments, _ := models.GetAllCommentsByIssueId(uint(id))
 
+			attachments, _ := models.GetAllAttachments(uint(id))
+
 			UserID := issue.Reporter
 			userInfo, _ := models.FindUserByName(UserID)
 
@@ -317,6 +319,27 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			embUser.SetResource(embeddedUser)
 
 			root.AddResource(embUser)
+
+			//embeded attachments
+			var embeddedAttachments []hal.Resource
+
+			for _, attachment := range attachments {
+				href := fmt.Sprintf("/api/attachments/%d", attachment.ID)
+				selfLink, _ := hal.NewLinkObject(href)
+
+				self, _ := hal.NewLinkRelation("self")
+				self.SetLink(selfLink)
+
+				embeddedAttachment := hal.NewResourceObject()
+				embeddedAttachment.AddLink(self)
+				embeddedAttachment.AddData(attachment)
+				embeddedComments = append(embeddedAttachments, embeddedAttachment)
+			}
+
+			embAttach, _ := hal.NewResourceRelation("attachments")
+			embAttach.SetResources(embeddedComments)
+
+			root.AddResource(embAttach)
 
 			//response
 			encoder := hal.NewEncoder()
