@@ -37,6 +37,7 @@ func main() {
 	r.HandleFunc("/api/issue/{id}/watch", handlers.WatchIssue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/issue/{id}/watch", handlers.UnWatchIssue).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/comments/{commentId}", handlers.GetComment).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/users", handlers.GetUsers).Methods("GET", "OPTIONS")
 
 	//END
 	server := &http.Server{
