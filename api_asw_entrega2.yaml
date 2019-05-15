@@ -1,0 +1,1098 @@
+openapi: 3.0.1
+info:
+  title: ASWProject
+  description: ASW Project 18-19 Q2
+  version: '0.1'
+servers:
+  - url: 'http://10.4.41.165:9092/api'
+  - url: 'http://localhost:9092/api'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+tags: 
+  - name: Issues
+    description: Create, update, delete and get all Issues
+  - name: IssueVote
+    description: Vote/Unvote an issue
+  - name: IssueWatch
+    description: Watch/Unwatch
+  - name: StatusIssue
+    description: Change status of an Issue
+  - name: Attachments
+    description: Everything about attachments
+  - name: Comments
+    description: Everything about comments from Issue
+  - name: Users
+    description: Everything users
+security:
+  - ApiKeyAuth: []
+  
+paths:
+  /issue:
+    post:
+      description: Adds a new issue to the database.  <br />
+       · kind [Bug, Enhancement, Proposal, Task] <br />
+       · priority [Trivial, Minor, Major, Critical, Blocker] <br />
+       · assignee must exists <br />
+       . file_path is optional
+      tags:
+        - Issues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                kind:
+                  type: string
+                  enum: [Bug, Enhancement, Proposal, Task]
+                priority:
+                  type: string
+                  enum: [Trivial, Minor, Major, Critical, Blocker]
+                assignee:
+                  type: string
+                reporter:
+                  type: string
+                file_path:
+                  type: string 
+              required:
+                - title
+                - kind
+                - priority
+              
+            examples:
+              '0':
+                value: 
+                  {
+                      "title": "Issue prova",
+                      "description": "provant una issue",
+                      "kind": "Bug",
+                      "priority": "Minor",
+                      "assignee": "Jony",
+                      "file_path": " "
+                  }
+      responses:
+        '200':
+          description: Issue added to database.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example:
+                  {
+                      "id": 1,
+                      "title": "Issue prova",
+                      "description": "provant una issue",
+                      "kind": "Bug",
+                      "priority": "Minor",
+                      "status": "New",
+                      "assignee": "Jony",
+                      "votes": 0,
+                      "file_path": " ",
+                      "reporter": "Laura"
+                  }
+        '403':
+          description: The user is not logged
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: Wrong parameters
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+            
+    get:
+      description: Returns all issues from user
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+          description: <b>·</b> kind [bug, enhancement, proposal, task] <br> <b>·</b> priority [trivial, minor, major, critical, blocker] <br> <b>·</b> status [new, on hold, resolved, duplicate, invalid, wontfix, closed] <br> <b>·</b> assignee <br> <b>·</b> watching <br> <b>·</b> mine <br> <b>·</b> open
+          
+        - name: order
+          in: query
+          schema:
+            type: string
+          description: <b>·</b> title <br> <b>·</b> kind <br> <b>·</b> priority <br> <b>·</b> status <br> <b>·</b> votes <br> <b>·</b> assignee <br> <b>·</b> created <br> <b>·</b> updated
+          
+        - name: direction
+          in: query
+          schema:
+            type: string
+          description: <b>·</b> asc <br> <b>·</b> desc 
+      
+      tags:
+        - Issues
+      responses:
+        '200':
+          description: Returns all the info of the issues from user
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                 [
+                   {
+                    "id": 1,
+                    "title": "Issue prova",
+                    "description": "provant una issue",
+                    "kind": "Task",
+                    "priority": "Critical",
+                    "status": "New",
+                    "assignee": "Jony",
+                    "votes": 0,
+                    "file_path": " ",
+                    "reporter": "Marcos"
+                   },
+                   
+                   {
+                    "id": 2, 
+                    "title": "Issue prova 2",
+                    "description": "provant una issue 2",
+                    "kind": "Bug",
+                    "priority": "Minor",
+                    "status": "New",
+                    "assignee": "Jony",
+                    "votes": 0,
+                    "file_path": " ",
+                    "reporter": "Marcos"
+                   }
+                ]
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '204':
+          description: There are no issues.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+              
+
+  /issue/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: Provided an id returns the information about the issue idintified by that id.
+      tags:
+        - Issues
+      responses:
+        '200':
+          description: Returns the info of the issue identified by the id.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "id": 3,
+                    "title": "Issue prova info",
+                    "description": "info de la issue",
+                    "kind": "Bug",
+                    "priority": "Major",
+                    "status": "New",
+                    "assignee": "Laura",
+                    "votes": 4,
+                    "file_path": " ",
+                    "reporter": "Marcos"
+                  }
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '404':
+          description: The issue identified by id could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}    
+            
+    delete:
+      parameters:
+            - in: path
+              name: id
+              required: true
+              schema:
+                type: string
+                minimum: 1
+              description: The issue Id
+      tags:
+        - Issues
+      description: Provided an id deletes the issue identified by that id.
+      responses:
+        '200':
+          description: Issue deleted successfully
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "OK": "IssueDeleted"
+                  }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The issue identified by id could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}    
+            
+            
+    put:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: Edit an issue identified by Id.
+      tags:
+        - Issues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                kind:
+                  type: string
+                  enum: [Bug, Enhancement, Proposal, Task]
+                priority:
+                  type: string
+                  enum: [Trivial, Minor, Major, critical, Blocker]
+                assignee:
+                  type: string
+                file_path:
+                  type: string
+              required:
+                - title
+                - kind
+                - priority
+            examples:
+              '0':
+                value: 
+                  {
+                      "title": "Issue prova nova",
+                      "description": "provant la edició d'una issue",
+                      "kind": "Task",
+                      "priority": "Major",
+                      "assignee": "Laura",
+                      "file_path": " "
+                  }
+      responses:
+        '200':
+          description: Issue edited successuflly.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "id": 4,
+                    "title": "Issue prova nova",
+                    "description": "provant la edició d'una issue",
+                    "kind": "Task",
+                    "priority": "Major",
+                    "status": "New",
+                    "assignee": "Laura",
+                    "votes": 2,
+                    "file_path": " ",
+                    "reporter": "Marcos"
+                  }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The issue identified by id could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '400':
+          description: Wrong parameters
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+            
+  /issue/{id}/attach:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: Adds a new attach to issue identified by id.
+      tags:
+        - Attachments
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                uploadFile:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Attach added to issue identified by id.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                {
+                  "ID": 7,
+                  "CreatedAt": "2019-05-15T16:42:05+02:00",
+                  "UpdatedAt": "2019-05-15T16:42:05+02:00",
+                  "DeletedAt": null,
+                  "issue_id": 2,
+                  "file_path": "tmp/9de26843e4f09c49c5a7e5c4.pdf"
+                }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The issue selected does not exists.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: Wrong parameters
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+              
+  /issue/attach/{idattach}:
+    delete:
+      parameters:
+            - in: path
+              name: idattach
+              required: true
+              schema:
+                type: string
+                minimum: 1
+              description: The attach Id  
+      tags:
+        - Attachments
+      description: Provided an idattach of attach deletes this attach.
+      responses:
+        '200':
+          description: Attachment deleted successfully
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The attach identified by idattach could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}    
+  
+  /issue/{id}/comments:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          minimum: 1
+        description: The issue Id
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: Add new comment to Issue with the same id as parameter.
+      tags:
+        - Comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+              required:
+                - text   
+            examples:
+              '0':
+                value: 
+                  {
+                      "text": "Example of a comment in the Issue"
+                  }
+      responses:
+        '200':
+          description: The user introduces a correct comment and it's saved in the BD.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "id": 1,
+                    "owner_comment": "Addicting",
+                    "content": "provant el contingut d'un comentari",
+                    "date": "19-02-1997",
+                    "issue_id": 3
+                  }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: The input is not valid. The text is empty.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '404':
+          description: The issue identified by id could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}    
+            
+            
+  /comments/{commentId}:
+    get:
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The comment Id
+      description: Provided an commentId returns the information about the comment idintified by that commentId.
+      tags:
+        - Comments
+      responses:
+        '200':
+          description: Returns the info of the comment identified by the commentId.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "id": 2,
+                    "owner_comment": "Laura",
+                    "content": "provant el contingut d'un comentari 2",
+                    "date": "19-03-1997",
+                    "issue_id": 3
+                  }
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '404':
+          description: The comment identified by commentId could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}    
+            
+    put:
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The comment Id
+      description: Edit a comment from issue identified by Id.
+      tags:
+        - Comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+              required:
+                - text
+            examples:
+              '0':
+                value: 
+                  {
+                      "text": "Example of edit comment in the Issue"
+                  }
+      responses:
+        '200':
+          description: Comment edited successuflly.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "id": 2,
+                    "owner_comment": "Javi",
+                    "content": "provant el contingut d'un comentari 3",
+                    "date": "23-02-2003",
+                    "issue_id": 4
+                  }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The issue identified by id could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {} 
+        '400':
+          description: Wrong parameters
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {} 
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+              
+            
+    delete:
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The comment Id
+      description: User deletes a comment
+      tags:
+        - Comments
+      responses:
+        '200':
+          description: A comment identified by commentId is deleted.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "OK": "CommentDeleted"
+                  }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The comment or issue does not exists
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}    
+            
+            
+  
+            
+  /issue/{id}/vote:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: User mark a issue as voted
+      tags:
+        - IssueVote
+      responses:
+        '200':
+          description: The issue has succesfuly been marked as voted
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '404':
+          description: The issue selected does not exists.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: The issue selected is already voted.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+    delete:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: User mark a issue as not voted
+      tags:
+        - IssueVote
+      responses:
+        '200':
+          description: Issue marked successfuly
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {} 
+        '404':
+          description: The issue selected does not exists.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: The issue selected is not voted yet.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+              
+  /issue/{id}/watch:
+    post:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: User mark a issue as watched
+      tags:
+        - IssueWatch
+      responses:
+        '200':
+          description: The issue has succesfuly been marked as watch
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '404':
+          description: The issue selected does not exists.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: The issue selected is already watched.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+    delete:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: User mark a issue as not watched
+      tags:
+        - IssueWatch
+      responses:
+        '200':
+          description: Issue marked successfuly
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '404':
+          description: The issue selected does not exists.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '400':
+          description: The issue selected is not watched yet.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+              
+              
+  /issue/{id}/state:
+    put:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The issue Id
+      description: Edit status of issue identified by Id.
+      tags:
+        - StatusIssue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [New, On hold, Resolved, Duplicate, Invalid, Wontfix, Closed]
+            examples:
+              '0':
+                value: 
+                  {
+                      "status": "Closed"
+                  }
+      responses:
+        '200':
+          description: Issue status edited successuflly.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                  {
+                    "id": 4,
+                    "title": "Issue prova status",
+                    "description": "provant la edició del status d'una issue",
+                    "kind": "Task",
+                    "priority": "Major",
+                    "status": "Closed",
+                    "assignee": "Laura",
+                    "votes": 2,
+                    "file_path": " ",
+                    "reporter": "Marcos"
+                  }
+        '403':
+          description: The user is not logged in
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '404':
+          description: The issue identified by id could not be found
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+            examples: {}
+        '400':
+          description: Wrong parameters
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}  
+              
+  /users:
+    get:
+      description: Returns all users from DataBase
+      
+      tags:
+        - Users
+      responses:
+        '200':
+          description: Returns all users
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: object
+              example: 
+                 [
+                   {
+                    "Name": "Javier Perez",
+                    "ID": "ven7m5wruXfasou3jht7gXbTgvRSV2"
+                   },
+                   
+                   {
+                    "Name": "Marcos Riverola",
+                    "ID": "I4lLKlv7ulQADbuSpG3IOmH8f3XND2"
+                   },
+                   {
+                    "Name": "Jonatan Bernal",
+                    "ID": "kU272Yt8ZYaSaICP89YeeSJIuPuri2"
+                   },
+                   
+                   {
+                    "Name": "Laura Munné",
+                    "ID": "CaT5Udq3jcRGdVzXFSD1fWADv4Mlo1"
+                   }
+                   
+                ]
+        '403':
+          description: The user is not logged.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '204':
+          description: There are no users.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}
+        '500':
+          description: Server error.
+          content:
+            application/json; charset=utf-8:
+              schema:
+                type: string
+              examples: {}      
+    
+
+            
+
+  
