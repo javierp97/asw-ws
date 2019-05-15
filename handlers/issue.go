@@ -1011,15 +1011,17 @@ func PostAttachment(w http.ResponseWriter, r *http.Request) {
 			var at models.Attachment
 			at.FilePath = newPath
 			at.IssueID = iss.ID
-			errs := models.CreateAttachment(at)
+			idat, errs := models.CreateAttachment(at)
 			if errs != nil {
 				renderError(w, "CANT_SAVE_FILE", http.StatusInternalServerError)
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			resp, _ := json.Marshal(at)
+			att, _ := models.FindAttachment(idat)
+			resp, _ := json.Marshal(att)
 			w.Write([]byte(resp))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -1036,7 +1038,7 @@ func randToken(len int) string {
 	return fmt.Sprintf("%x", b)
 }
 
-func PutAttachment(w http.ResponseWriter, r *http.Request) {
+func DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -1045,40 +1047,36 @@ func PutAttachment(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		exists := authenticate(r)
 		if exists == true {
-			key := r.Header.Get("Authorization")
 			vars := mux.Vars(r)
-			id, _ := strconv.Atoi(vars["id"])
-
-			b, _ := models.IsVoted(key, uint(id))
-			if id == 0 {
+			idiss, _ := strconv.Atoi(vars["idattach"])
+			if idiss <= 0 {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
 			}
-			var voteIssue models.VotedIssue
-			voteIssue.IDIssue = uint(id)
-			voteIssue.UserID = key
-			iss, erriss := models.FindIssueByID(voteIssue.IDIssue)
-			if erriss != nil || iss.Title == "" {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"The issue does not exist"}`))
-				return
-			}
-			if !b {
-				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"The issue is not voted by this user"}`))
-				return
-			}
+			idatt, _ := strconv.Atoi(vars["idattach"])
 
-			if models.UnvoteIssue(voteIssue) != nil {
+			if idatt == 0 {
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte(`{"Error":"Error voting the issue"}`))
+				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
 			}
-			models.VoteThisIssue(uint(id))
+			att, err := models.FindAttachment(uint(idatt))
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"Error":"Attachment Not Found"}`))
+				return
+			}
+			errdel := models.DeleteAttachment(att)
+			if errdel != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Error deleting the attachment"}`))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
@@ -1138,7 +1136,7 @@ func UnWatchIssue(w http.ResponseWriter, r *http.Request) {
 			b := models.ExistsIssue(uint(id))
 			if !b {
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+				w.Write([]byte(`{"Error":"Attachment Not Found"}`))
 				return
 			}
 			bwatch, _ := models.IsWatched(key, uint(id))
@@ -1157,6 +1155,7 @@ func UnWatchIssue(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"200":"OK"}`))
 		} else {
+			w.WriteHeader(http.StatusForbidden)
 			w.Write([]byte(`{"403":"Forbbiden"}`))
 		}
 	}
