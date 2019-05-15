@@ -227,9 +227,7 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 					first = false
 				} else {
 					comaJ := []byte(`,`)
-					for _, coma := range comaJ {
-						issuesHal = append(issuesHal, coma)
-					}
+					issuesHal = append(issuesHal, comaJ[0])
 				}
 
 				for _, b := range byteJson {
@@ -240,9 +238,8 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			//for _, isHal := range issuesHal {
 			f := []byte(`]`)
-			for _, bi := range f {
-				issuesHal = append(issuesHal, bi)
-			}
+			issuesHal = append(issuesHal, f[0])
+
 			w.Write(issuesHal)
 
 			//	}
