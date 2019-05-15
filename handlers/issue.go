@@ -656,13 +656,14 @@ func PostAttachment(w http.ResponseWriter, r *http.Request) {
 			var at models.Attachment
 			at.FilePath = newPath
 			at.IssueID = iss.ID
-			errs := models.CreateAttachment(at)
+			idat, errs := models.CreateAttachment(at)
 			if errs != nil {
 				renderError(w, "CANT_SAVE_FILE", http.StatusInternalServerError)
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			resp, _ := json.Marshal(at)
+			att, _ := models.FindAttachment(idat)
+			resp, _ := json.Marshal(att)
 			w.Write([]byte(resp))
 		} else {
 			w.WriteHeader(http.StatusForbidden)
@@ -692,8 +693,8 @@ func DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		exists := authenticate(r)
 		if exists == true {
 			vars := mux.Vars(r)
-			idiss, _ := strconv.Atoi(vars["id"])
-			if idiss == 0 {
+			idiss, _ := strconv.Atoi(vars["idattach"])
+			if idiss <= 0 {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"Error":"Wrong parameters"}`))
 				return
