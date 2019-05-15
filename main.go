@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"../asw-ws/handlers"
+	"asw-ws/handlers"
 
 	"github.com/gorilla/mux"
 )
