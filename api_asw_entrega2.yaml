@@ -26,7 +26,7 @@ tags:
   - name: Comments
     description: Everything about comments from Issue
   - name: Users
-    description: Everything users
+    description: Everything about users
 security:
   - ApiKeyAuth: []
   
