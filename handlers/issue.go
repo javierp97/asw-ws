@@ -189,7 +189,7 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 
 				//añade properties y link
 				root.AddData(issue)
-				href := fmt.Sprintf("/api/issue/%d", issue.ID) //TODO: aqui quin link poso ? col.lectiu o indiv
+				href := fmt.Sprintf("/issue/%d", issue.ID) //TODO: aqui quin link poso ? col.lectiu o indiv
 				selfLink, _ := hal.NewLinkObject(href)
 				self, _ := hal.NewLinkRelation("self")
 				self.SetLink(selfLink)
@@ -201,7 +201,7 @@ func GetAllIssues(w http.ResponseWriter, r *http.Request) {
 				println(userInfo.ID)
 
 				//embeded user
-				hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+				hrefU := fmt.Sprintf("/user/%d", userInfo.ID)
 				selfLinkU, _ := hal.NewLinkObject(hrefU)
 
 				selfU, _ := hal.NewLinkRelation("self")
@@ -279,7 +279,7 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			root := hal.NewResourceObject()
 			//añade properties y link
 			root.AddData(issue)
-			href := fmt.Sprintf("/api/issue/%d", id)
+			href := fmt.Sprintf("/issue/%d", id)
 			selfLink, _ := hal.NewLinkObject(href)
 			self, _ := hal.NewLinkRelation("self")
 			self.SetLink(selfLink)
@@ -298,7 +298,7 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			var embeddedComments []hal.Resource
 
 			for _, comment := range comments {
-				href := fmt.Sprintf("/api/comment/%d", comment.ID)
+				href := fmt.Sprintf("/comment/%d", comment.ID)
 				selfLink, _ := hal.NewLinkObject(href)
 
 				self, _ := hal.NewLinkRelation("self")
@@ -316,7 +316,7 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			root.AddResource(embComments)
 
 			//user
-			hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+			hrefU := fmt.Sprintf("/user/%d", userInfo.ID)
 			selfLinkU, _ := hal.NewLinkObject(hrefU)
 
 			selfU, _ := hal.NewLinkRelation("self")
@@ -336,7 +336,7 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			var embeddedAttachments []hal.Resource
 
 			for _, attachment := range attachments {
-				href := fmt.Sprintf("/api/attachments/%d", attachment.ID)
+				href := fmt.Sprintf("/attachments/%d", attachment.ID)
 				selfLink, _ := hal.NewLinkObject(href)
 
 				self, _ := hal.NewLinkRelation("self")
@@ -711,7 +711,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 			root := hal.NewResourceObject()
 			//añade properties y link
 			root.AddData(comment)
-			href := fmt.Sprintf("/api/comment/%d", id)
+			href := fmt.Sprintf("/comment/%d", id)
 			selfLink, _ := hal.NewLinkObject(href)
 			self, _ := hal.NewLinkRelation("self")
 			self.SetLink(selfLink)
@@ -727,7 +727,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 			println(userInfo.ID)
 
 			//embeded issue
-			hrefIssue := fmt.Sprintf("/api/user/%d", issueID)
+			hrefIssue := fmt.Sprintf("/user/%d", issueID)
 			selfLinkIssue, _ := hal.NewLinkObject(hrefIssue)
 
 			selfIssue, _ := hal.NewLinkRelation("self")
@@ -744,7 +744,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 			root.AddResource(embIssue)
 
 			//embdeded user
-			hrefU := fmt.Sprintf("/api/user/%d", userInfo.ID)
+			hrefU := fmt.Sprintf("/user/%d", userInfo.ID)
 			selfLinkU, _ := hal.NewLinkObject(hrefU)
 
 			selfU, _ := hal.NewLinkRelation("self")
