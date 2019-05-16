@@ -459,7 +459,10 @@ func UpdateState(w http.ResponseWriter, r *http.Request) {
 			var newIssue models.Issue
 			err := decoder.Decode(&newIssue)
 			if err != nil {
-				panic(err) //TODO
+				w.WriteHeader(http.StatusInternalServerError)
+				a := "Internal Server Error"
+				res, _ := json.Marshal(a)
+				w.Write(res)
 			}
 			vars := mux.Vars(r)
 			id, _ := strconv.Atoi(vars["id"])
@@ -514,7 +517,10 @@ func UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			var newIssue models.Issue
 			err := decoder.Decode(&newIssue)
 			if err != nil {
-				panic(err) //TODO
+				w.WriteHeader(http.StatusInternalServerError)
+				a := "Internal Server Error"
+				res, _ := json.Marshal(a)
+				w.Write(res)
 			}
 			vars := mux.Vars(r)
 			id, _ := strconv.Atoi(vars["id"])
@@ -793,7 +799,10 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 			err := decoder.Decode(&newComment)
 
 			if err != nil {
-				panic("error")
+				w.WriteHeader(http.StatusInternalServerError)
+				a := "Internal Server Error"
+				res, _ := json.Marshal(a)
+				w.Write(res)
 			}
 
 			vars := mux.Vars(r)
@@ -849,7 +858,10 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 			err := decoder.Decode(&newComment)
 
 			if err != nil {
-				panic("error")
+				w.WriteHeader(http.StatusInternalServerError)
+				a := "Internal Server Error"
+				res, _ := json.Marshal(a)
+				w.Write(res)
 			}
 
 			vars := mux.Vars(r)
