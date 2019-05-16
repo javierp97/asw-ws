@@ -553,15 +553,15 @@ func DeleteIssue(w http.ResponseWriter, r *http.Request) {
 		if exists == true {
 			vars := mux.Vars(r)
 			id, _ := strconv.Atoi(vars["id"])
-			issue, error := models.FindIssueByID(uint(id))
-			fmt.Println(error)
-			err := models.DeleteIssue(issue)
+			issue, errf := models.FindIssueByID(uint(id))
 
-			if error != nil {
+			if errf != nil {
 				w.WriteHeader(http.StatusNotFound)
 				w.Write([]byte(`{"404":"Not found the issue"}`))
 				return
 			}
+			err := models.DeleteIssue(issue)
+
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte(`{"500":"Server error"}`))
@@ -771,7 +771,10 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 			//w.Write(j)
 		} else {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(`{"Error":"You do not have access to do this request"`))
+
+			a := `{"Error":"You do not have access to do this request"`
+			txt, _ := json.Marshal(a)
+			w.Write(txt)
 		}
 	}
 }
@@ -800,7 +803,10 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 
 			if exists == false {
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"The issue does not exist"}`))
+
+				a := `{"Error":"The issue does not exist"}`
+				txt, _ := json.Marshal(a)
+				w.Write(txt)
 				return
 			}
 
@@ -810,10 +816,16 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 			newComment.IssueID = uint(id)
 
 			commentId, _ := models.CreateCommentAndReturnId(newComment)
-			commentIdString := strconv.Itoa(int(commentId))
+			comment, err := models.GetCommentById(uint(commentId))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Could not find the comment"}`))
+				return
+			}
+
+			j, _ := json.Marshal(comment)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("{Ok: Comment created with id: " + commentIdString + "}"))
-			return
+			w.Write(j)
 
 		} else {
 			w.WriteHeader(http.StatusForbidden)
@@ -848,25 +860,40 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"The comment does not exist"}`))
+				a := `{"Error":"The comment does not exist"}`
+				txt, _ := json.Marshal(a)
+				w.Write(txt)
+
 				return
 			}
 
 			if owner != user.FirebaseID {
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte(`{"Error":"This comment is not yours"}`))
+				a := `{"Error":"This comment is not yours"}`
+				txt, _ := json.Marshal(a)
+				w.Write(txt)
 				return
 			}
 
 			models.UpdateCommentById(uint(id), newComment.Content)
 
+			comment, err := models.GetCommentById(uint(id))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{"Error":"Could not find the comment"}`))
+				return
+			}
+
+			j, _ := json.Marshal(comment)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"OK":"Comment updated succesfully}"`))
+			w.Write(j)
 			return
 
 		} else {
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(`{"403":"Forbbiden"}`))
+			a := `{"403":"Forbbiden"}`
+			txt, _ := json.Marshal(a)
+			w.Write(txt)
 			return
 		}
 	}
