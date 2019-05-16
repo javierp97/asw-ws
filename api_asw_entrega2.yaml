@@ -26,7 +26,7 @@ tags:
   - name: Comments
     description: Everything about comments from Issue
   - name: Users
-    description: Everything about users
+    description: Everything about the  users
 security:
   - ApiKeyAuth: []
   
@@ -37,7 +37,6 @@ paths:
        · kind [Bug, Enhancement, Proposal, Task] <br />
        · priority [Trivial, Minor, Major, Critical, Blocker] <br />
        · assignee must exists <br />
-       . file_path is optional
       tags:
         - Issues
       requestBody:
@@ -60,8 +59,6 @@ paths:
                   type: string
                 reporter:
                   type: string
-                file_path:
-                  type: string 
               required:
                 - title
                 - kind
@@ -75,8 +72,7 @@ paths:
                       "description": "provant una issue",
                       "kind": "Bug",
                       "priority": "Minor",
-                      "assignee": "Jony",
-                      "file_path": " "
+                      "assignee": "Jony"
                   }
       responses:
         '200':
@@ -95,7 +91,6 @@ paths:
                       "status": "New",
                       "assignee": "Jony",
                       "votes": 0,
-                      "file_path": " ",
                       "reporter": "Laura"
                   }
         '403':
@@ -127,7 +122,7 @@ paths:
           in: query
           schema:
             type: string
-          description: <b>·</b> kind [bug, enhancement, proposal, task] <br> <b>·</b> priority [trivial, minor, major, critical, blocker] <br> <b>·</b> status [new, on hold, resolved, duplicate, invalid, wontfix, closed] <br> <b>·</b> assignee <br> <b>·</b> watching <br> <b>·</b> mine <br> <b>·</b> open
+          description: <b>·</b> kind [Bug, Enhancement, Proposal, Task] <br> <b>·</b> priority [Trivial, Minor, Major, Critical, Blocker] <br> <b>·</b> status [New, On Hold, Resolved, Duplicate, Invalid, Wont Fix, Closed] <br> <b>·</b> assignee <br> <b>·</b> watching <br> <b>·</b> mine <br> <b>·</b> open
           
         - name: order
           in: query
