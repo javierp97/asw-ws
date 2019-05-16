@@ -1163,7 +1163,7 @@ func UnWatchIssue(w http.ResponseWriter, r *http.Request) {
 			b := models.ExistsIssue(uint(id))
 			if !b {
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"Error":"Attachment Not Found"}`))
+				w.Write([]byte(`{"Error":"Issue Not Found"}`))
 				return
 			}
 			bwatch, _ := models.IsWatched(key, uint(id))
