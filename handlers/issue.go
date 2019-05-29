@@ -277,19 +277,13 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 
 			//crea root
 			root := hal.NewResourceObject()
-			//añade properties y link
-			root.AddData(issue)
 
 			//add if its voted or not
 			key := r.Header.Get("Authorization")
 			b, _ := models.IsVoted(key, uint(id))
-			type Isvoted struct {
-				Voted bool
-			}
-			resp := Isvoted{
-				Voted: b,
-			}
-			root.AddData(resp)
+			issue.Voted = b
+			//añade properties y link
+			root.AddData(issue)
 
 			href := fmt.Sprintf("/issue/%d", id)
 			selfLink, _ := hal.NewLinkObject(href)
