@@ -488,7 +488,7 @@ func UpdateState(w http.ResponseWriter, r *http.Request) {
 			owner, err := models.GetCommentOwnerById(uint(id))
 			comment.Content = "The status of this issue changed to " + newIssue.Status
 			comment.OwnerID = r.Header.Get("Authorization")
-			comment.OwnerName = owner
+			comment.OwnerName = owner.OwnerName
 			comment.IssueID = uint(id)
 			models.CreateComment(comment)
 
@@ -879,7 +879,7 @@ func EditComment(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if owner != user.FirebaseID {
+			if owner.OwnerID != user.FirebaseID {
 				w.WriteHeader(http.StatusForbidden)
 				a := `{"Error":"This comment is not yours"}`
 				txt, _ := json.Marshal(a)
@@ -932,7 +932,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if owner != user.FirebaseID {
+			if owner.OwnerID != user.FirebaseID {
 				w.WriteHeader(http.StatusForbidden)
 				w.Write([]byte(`{"Error":"You are not the owner of the issue so you can not delete it"}`))
 				return
