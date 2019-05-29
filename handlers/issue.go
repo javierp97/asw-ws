@@ -279,6 +279,18 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			root := hal.NewResourceObject()
 			//añade properties y link
 			root.AddData(issue)
+
+			//add if its voted or not
+			key := r.Header.Get("Authorization")
+			b, _ := models.IsVoted(key, uint(id))
+			type Isvoted struct {
+				Voted bool
+			}
+			resp := Isvoted{
+				Voted: b,
+			}
+			root.AddData(resp)
+
 			href := fmt.Sprintf("/issue/%d", id)
 			selfLink, _ := hal.NewLinkObject(href)
 			self, _ := hal.NewLinkRelation("self")
@@ -353,16 +365,6 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 
 			root.AddResource(embAttach)
 
-			//add if its voted or not
-			key := r.Header.Get("Authorization")
-			b, _ := models.IsVoted(key, uint(id))
-			type Isvoted struct {
-				voted bool
-			}
-			resp := Isvoted{
-				voted: b,
-			}
-			root.AddData(resp)
 			//response
 			encoder := hal.NewEncoder()
 			byte, _ := encoder.ToJSON(root)
