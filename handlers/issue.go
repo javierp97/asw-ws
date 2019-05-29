@@ -281,6 +281,8 @@ func GetIssue(w http.ResponseWriter, r *http.Request) {
 			//add if its voted or not
 			key := r.Header.Get("Authorization")
 			b, _ := models.IsVoted(key, uint(id))
+			fmt.Println("is voted")
+			fmt.Println(b)
 			issue.Voted = b
 			//añade properties y link
 			root.AddData(issue)
