@@ -683,6 +683,9 @@ func UnVoteIssue(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte(`{"Error":"Error voting the issue"}`))
 				return
 			}
+			fmt.Println("quito voto")
+			fmt.Println("antes")
+			fmt.Println(iss.Votes)
 			err := models.UnvoteThisIssue(uint(id))
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
